@@ -8,5 +8,6 @@ import java.util.List;
 @Data
 @Builder
 public class Playlist {
+    private String name;
     private List<Video> videoList;
 }

@@ -4,16 +4,16 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.net.URL;
-import java.time.LocalTime;
+import java.time.Duration;
 
 @Data
 @Builder
 public class Video {
     private String title;
-    private LocalTime duration;
-    private int likes;
-    private int views;
-    private String playlist;
     private URL url;
+    private String duration;
+    private String views;
+    private String when;
+
 
 }
