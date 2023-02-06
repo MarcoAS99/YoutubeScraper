@@ -1,10 +1,12 @@
 package com.marcoas99.youtubescraper.service;
 
+import com.marcoas99.youtubescraper.model.Playlist;
 import com.marcoas99.youtubescraper.model.Video;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -13,11 +15,11 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class YoutubeScraperService {
@@ -38,7 +40,7 @@ public class YoutubeScraperService {
         element = webDriver.findElement(featuredVideoXPath);
         element.click();
         WebDriverWait wait = new WebDriverWait(webDriver, Duration.ofMillis(1000));
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("ytp-time-duration")));
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("#metadata-container > ytd-video-meta-block")));
         String pageHtml = ((JavascriptExecutor)webDriver).executeScript("return document.documentElement.outerHTML;").toString();
         webDriver.quit();
 
@@ -53,12 +55,14 @@ public class YoutubeScraperService {
     }
 
     public Video getFeaturedVideo(Document document) throws MalformedURLException {
-        Element mainSection = document.getElementById("contents");
-        String duration = mainSection.getElementsByClass("ytp-time-duration").text();
-        String title = mainSection.getElementsByClass("ytp-title").text();
-        String href = mainSection.getElementsByClass("ytp-title").select("a.ytp-title-link").attr("href");
-        String views = document.select("#metadata-line > span:nth-child(3)").first().text();
-        String when = document.select("#metadata-line > span:nth-child(4)").first().text();
+        Element videoThumbnail = document.getElementsByTag("ytd-item-section-renderer").first().getElementsByTag("ytd-player").first();
+        String duration = videoThumbnail.getElementsByClass("ytp-time-duration").text();
+        String title = videoThumbnail.getElementsByClass("ytp-title-text").text();
+        String href = videoThumbnail.getElementsByClass("ytp-title").select("a.ytp-title-link").attr("href");
+
+        Element featuredMetadata = document.select("#content").first();
+        String views = featuredMetadata.getElementById("metadata-line").select("span:nth-child(3)").text();
+        String when = featuredMetadata.getElementById("metadata-line").select("span:nth-child(4)").text();
 
         return Video.builder()
                 .title(title)
@@ -66,6 +70,44 @@ public class YoutubeScraperService {
                 .duration(duration)
                 .views(views)
                 .when(when)
+                .build();
+    }
+
+    public List<Playlist> getPlaylistList(Document document) throws MalformedURLException {
+        List<Playlist> playlistList = new ArrayList<>();
+        Elements sections = document.getElementsByTag("ytd-item-section-renderer");
+        for (int i = 1; i<sections.size(); i++){
+            if (sections.get(i).getElementsByTag("ytd-grid-video-renderer").isEmpty()){
+                continue;
+            }
+            Element playlistSection = sections.get(i).getElementsByTag("ytd-shelf-renderer").first();
+            playlistList.add(getPlaylist(playlistSection));
+        }
+        return playlistList;
+    }
+    private Playlist getPlaylist(Element playlistSection) throws MalformedURLException {
+        String playlistName = playlistSection.getElementById("title-text").text();
+        Elements videosSection = playlistSection.getElementsByTag("ytd-grid-video-renderer");
+        List<Video> videoList = new ArrayList<>();
+        for (Element video : videosSection) {
+            videoList.add(getVideo(video));
+        }
+        return Playlist.builder()
+                .name(playlistName)
+                .videoList(videoList)
+                .build();
+    }
+
+    private Video getVideo(Element videoSection) throws MalformedURLException {
+        Element videoThumbnail = videoSection.getElementsByTag("ytd-thumbnail").first();
+        Element videoDetails = videoSection.getElementById("details");
+
+        return Video.builder()
+                .title(videoDetails.getElementsByTag("h3").text())
+                .url(new URL("https://www.youtube.com" + videoDetails.getElementsByTag("a").first().attr("href")))
+                .duration(videoThumbnail.getElementsByTag("span").first().getElementById("text").text())
+                .views(videoDetails.getElementById("metadata-line").getElementsByTag("span").get(0).text())
+                .when(videoDetails.getElementById("metadata-line").getElementsByTag("span").get(1).text())
                 .build();
     }
 }
