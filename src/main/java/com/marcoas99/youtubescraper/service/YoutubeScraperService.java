@@ -27,7 +27,7 @@ public class YoutubeScraperService {
     public Document getPage(String url) {
         WebDriver webDriver;
         ChromeOptions chromeOptions = new ChromeOptions();
-        chromeOptions.addArguments("--headless");
+        chromeOptions.addArguments("--mute-audio","start-maximized");
         webDriver = WebDriverManager.chromedriver().capabilities(chromeOptions).create();
 
         webDriver.get(url);
@@ -69,7 +69,7 @@ public class YoutubeScraperService {
                 .url(new URL(href))
                 .duration(duration)
                 .views(views)
-                .when(when)
+                .uploaded(when)
                 .build();
     }
 
@@ -107,7 +107,7 @@ public class YoutubeScraperService {
                 .url(new URL("https://www.youtube.com" + videoDetails.getElementsByTag("a").first().attr("href")))
                 .duration(videoThumbnail.getElementsByTag("span").first().getElementById("text").text())
                 .views(videoDetails.getElementById("metadata-line").getElementsByTag("span").get(0).text())
-                .when(videoDetails.getElementById("metadata-line").getElementsByTag("span").get(1).text())
+                .uploaded(videoDetails.getElementById("metadata-line").getElementsByTag("span").get(1).text())
                 .build();
     }
 }
