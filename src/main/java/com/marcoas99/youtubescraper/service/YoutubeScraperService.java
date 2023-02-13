@@ -27,7 +27,7 @@ public class YoutubeScraperService {
     public Document getPage(String url) {
         WebDriver webDriver;
         ChromeOptions chromeOptions = new ChromeOptions();
-        chromeOptions.addArguments("--mute-audio","start-maximized");
+        chromeOptions.addArguments("--headless","--mute-audio","start-maximized");
         webDriver = WebDriverManager.chromedriver().capabilities(chromeOptions).create();
 
         webDriver.get(url);
